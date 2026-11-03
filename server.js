@@ -6,16 +6,16 @@ const authRoutes = require('./routes/authRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const postRoutes = require('./routes/postRoutes');
 
-// Environment variables load karein
+// Load environment variables
 dotenv.config();
 
 const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: '*' }));
 
-// --- YAHAN ADD KAREIN (Database Middleware) ---
+// Database Middleware — connect on every request (Vercel serverless compatible)
 app.use(async (req, res, next) => {
     try {
         await connectDB();
@@ -25,18 +25,17 @@ app.use(async (req, res, next) => {
     }
 });
 
-
-// Routes
+// Routes — core features only (auth, media, posts)
 app.use('/api/auth', authRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/posts', postRoutes);
 
-// Test route
+// Health-check route
 app.get('/', (req, res) => {
     res.send('Blog API is running successfully!');
 });
 
-// Server start (Vercel compatible)
+// Server start (Vercel compatible — skipped in production)
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {

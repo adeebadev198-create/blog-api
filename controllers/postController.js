@@ -21,11 +21,40 @@ const createPost = async (req, res) => {
     }
 };
 
-// Saare blogs fetch karein
+// Saare blogs fetch karein (Pagination + Filters ke sath)
 const getPosts = async (req, res) => {
     try {
-        const posts = await Post.find().populate('author', 'name');
-        res.status(200).json(posts);
+        // 1. Query parameters se page, limit, search aur category nikalna
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 6; // Ek page par 6 blogs
+        const skip = (page - 1) * limit;
+        
+        const { search, category } = req.query;
+
+        // 2. Filter object banana
+        let filter = {};
+        if (category && category !== 'All') {
+            filter.category = category;
+        }
+        if (search) {
+            filter.title = { $regex: search, $options: 'i' }; // Case-insensitive search
+        }
+
+        // 3. Database se data fetch karna
+        const totalPosts = await Post.countDocuments(filter);
+        const posts = await Post.find(filter)
+            .sort({ createdAt: -1 }) // Newest first
+            .skip(skip)
+            .limit(limit)
+            .populate('author', 'name');
+
+        // 4. Response bhejna
+        res.status(200).json({
+            posts: posts,
+            totalPages: Math.ceil(totalPosts / limit),
+            currentPage: page,
+            totalPosts: totalPosts
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -42,7 +71,7 @@ const getPostById = async (req, res) => {
     }
 };
 
-// Blog Update Karein (Naya add kiya)
+// Blog Update Karein
 const updatePost = async (req, res) => {
     try {
         const { title, content, image, category } = req.body;
@@ -62,7 +91,7 @@ const updatePost = async (req, res) => {
     }
 };
 
-// Blog Delete Karein (Naya add kiya)
+// Blog Delete Karein
 const deletePost = async (req, res) => {
     try {
         const post = await Post.findByIdAndDelete(req.params.id);
